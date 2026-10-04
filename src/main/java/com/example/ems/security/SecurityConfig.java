@@ -1,7 +1,8 @@
 package com.example.ems.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,6 +19,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -31,6 +36,7 @@ public class SecurityConfig {
     @Autowired
     private JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
+
     // =========================================================
     // PASSWORD ENCODER
     // =========================================================
@@ -39,6 +45,7 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
 
     // =========================================================
     // AUTHENTICATION MANAGER
@@ -50,6 +57,53 @@ public class SecurityConfig {
 
         return config.getAuthenticationManager();
     }
+
+
+    // =========================================================
+    // CORS CONFIGURATION
+    // =========================================================
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // Frontend URLs allowed to call Spring Boot
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "https://ems-frontend-nine-ashy.vercel.app"
+        ));
+
+        // Allowed HTTP methods
+        configuration.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "PATCH",
+                "OPTIONS"
+        ));
+
+        // Allow request headers such as Authorization and Content-Type
+        configuration.setAllowedHeaders(List.of("*"));
+
+        // Allow frontend to read Authorization header if required
+        configuration.setExposedHeaders(List.of(
+                "Authorization"
+        ));
+
+        // Allow credentials
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        // Apply CORS configuration to all endpoints
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
+
 
     // =========================================================
     // SECURITY FILTER CHAIN
@@ -67,11 +121,13 @@ public class SecurityConfig {
 
                 .csrf(csrf -> csrf.disable())
 
+
                 // -------------------------------------------------
                 // CORS
                 // -------------------------------------------------
 
                 .cors(Customizer.withDefaults())
+
 
                 // -------------------------------------------------
                 // STATELESS JWT AUTHENTICATION
@@ -83,12 +139,14 @@ public class SecurityConfig {
                         )
                 )
 
+
                 // -------------------------------------------------
                 // EXCEPTION HANDLING
                 // -------------------------------------------------
 
                 .exceptionHandling(exception ->
                         exception
+
                                 // 401 - Missing/invalid JWT
                                 .authenticationEntryPoint(
                                         jwtAuthenticationEntryPoint
@@ -100,11 +158,13 @@ public class SecurityConfig {
                                 )
                 )
 
+
                 // =================================================
                 // AUTHORIZATION
                 // =================================================
 
                 .authorizeHttpRequests(auth -> auth
+
 
                         // -------------------------------------------------
                         // PUBLIC AUTHENTICATION APIs
@@ -112,6 +172,7 @@ public class SecurityConfig {
 
                         .requestMatchers("/auth/**")
                         .permitAll()
+
 
                         // -------------------------------------------------
                         // SWAGGER / OPENAPI
@@ -128,9 +189,11 @@ public class SecurityConfig {
                         )
                         .permitAll()
 
+
                         // =================================================
                         // AI APIs
                         // =================================================
+
 
                         // -------------------------------------------------
                         // Performance Prediction
@@ -145,6 +208,7 @@ public class SecurityConfig {
                                 "EMPLOYEE"
                         )
 
+
                         // -------------------------------------------------
                         // Attrition Prediction
                         // ADMIN, HR, MANAGER ONLY
@@ -156,6 +220,7 @@ public class SecurityConfig {
                                 "HR",
                                 "MANAGER"
                         )
+
 
                         // -------------------------------------------------
                         // Attendance AI
@@ -170,6 +235,7 @@ public class SecurityConfig {
                                 "EMPLOYEE"
                         )
 
+
                         // -------------------------------------------------
                         // Resume Screening
                         // ADMIN, HR ONLY
@@ -180,6 +246,7 @@ public class SecurityConfig {
                                 "ADMIN",
                                 "HR"
                         )
+
 
                         // -------------------------------------------------
                         // HR Chatbot
@@ -194,6 +261,7 @@ public class SecurityConfig {
                                 "EMPLOYEE"
                         )
 
+
                         // -------------------------------------------------
                         // ALL OTHER APIs
                         // AUTHENTICATED USERS ONLY
@@ -203,9 +271,11 @@ public class SecurityConfig {
                         .authenticated()
                 )
 
+
                 // =================================================
                 // JWT FILTER
                 // =================================================
+
                 .addFilterBefore(
                         jwtFilter,
                         UsernamePasswordAuthenticationFilter.class
