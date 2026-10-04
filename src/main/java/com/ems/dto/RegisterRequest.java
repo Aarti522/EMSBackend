@@ -19,6 +19,8 @@ public class RegisterRequest {
 
     private String phone;
 
+    private String address;
+
     private String department;
 
     public RegisterRequest() {
@@ -54,6 +56,14 @@ public class RegisterRequest {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 
     public String getDepartment() {

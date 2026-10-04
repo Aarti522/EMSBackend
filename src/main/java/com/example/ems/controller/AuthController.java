@@ -23,7 +23,6 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "*")
 public class AuthController {
 
     @Autowired
@@ -50,11 +49,9 @@ public class AuthController {
     public LoginResponse login(
             @Valid @RequestBody LoginRequest request) {
 
-        // Find user using email
         User user =
                 userRepository.findByEmail(request.getEmail());
 
-        // User not found
         if (user == null) {
             return new LoginResponse(
                     null,
@@ -63,7 +60,6 @@ public class AuthController {
             );
         }
 
-        // Check password
         if (!passwordEncoder.matches(
                 request.getPassword(),
                 user.getPassword())) {
@@ -75,11 +71,9 @@ public class AuthController {
             );
         }
 
-        // Generate JWT
         String token =
                 jwtUtil.generateToken(user.getEmail());
 
-        // Return token + role
         return new LoginResponse(
                 token,
                 user.getRole(),
@@ -97,11 +91,10 @@ public class AuthController {
             @Valid @RequestBody RegisterRequest request) {
 
         // -----------------------------------------------------
-        // 1. Validate User email
+        // 1. CHECK USER EMAIL
         // -----------------------------------------------------
 
-        if (userRepository.existsByEmail(
-                request.getEmail())) {
+        if (userRepository.existsByEmail(request.getEmail())) {
 
             return ResponseEntity
                     .badRequest()
@@ -110,11 +103,10 @@ public class AuthController {
 
 
         // -----------------------------------------------------
-        // 2. Validate Employee email
+        // 2. CHECK EMPLOYEE EMAIL
         // -----------------------------------------------------
 
-        if (employeeRepository.existsByEmail(
-                request.getEmail())) {
+        if (employeeRepository.existsByEmail(request.getEmail())) {
 
             return ResponseEntity
                     .badRequest()
@@ -123,7 +115,7 @@ public class AuthController {
 
 
         // -----------------------------------------------------
-        // 3. Find Department
+        // 3. FIND DEPARTMENT
         // -----------------------------------------------------
 
         Department department =
@@ -140,7 +132,7 @@ public class AuthController {
 
 
         // -----------------------------------------------------
-        // 4. Create Employee
+        // 4. CREATE EMPLOYEE
         // -----------------------------------------------------
 
         Employee employee = new Employee();
@@ -148,9 +140,13 @@ public class AuthController {
         employee.setName(request.getName());
         employee.setEmail(request.getEmail());
         employee.setPhone(request.getPhone());
+
+        // SAVE ADDRESS
+        employee.setAddress(request.getAddress());
+
+        // SAVE DEPARTMENT RELATION
         employee.setDepartment(department);
 
-        // New employee is active
         employee.setStatus("ACTIVE");
 
         Employee savedEmployee =
@@ -158,46 +154,37 @@ public class AuthController {
 
 
         // -----------------------------------------------------
-        // 5. Create User
+        // 5. CREATE USER
         // -----------------------------------------------------
 
         User user = new User();
 
         user.setEmail(request.getEmail());
 
-        // Password must always be encrypted
         user.setPassword(
                 passwordEncoder.encode(
                         request.getPassword()
                 )
         );
 
-
-        // -----------------------------------------------------
-        // IMPORTANT
-        // Public registration can create ONLY EMPLOYEE
-        // -----------------------------------------------------
-
+        // Public registration creates Employee only
         user.setRole("EMPLOYEE");
 
-
-        // Connect User with Employee
+        // Connect user with employee
         user.setEmployee(savedEmployee);
 
-
-        // Mark as first login
         user.setFirstLogin(true);
 
 
         // -----------------------------------------------------
-        // 6. Save User
+        // 6. SAVE USER
         // -----------------------------------------------------
 
         userRepository.save(user);
 
 
         // -----------------------------------------------------
-        // 7. Registration response
+        // 7. RESPONSE
         // -----------------------------------------------------
 
         return ResponseEntity.ok(
