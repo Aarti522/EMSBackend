@@ -28,30 +28,18 @@ public class PythonAIClient {
         this.restTemplate = restTemplate;
 
         // Remove trailing slash if present
-        this.pythonBaseUrl =
-                pythonBaseUrl.endsWith("/")
-                        ? pythonBaseUrl.substring(
-                                0,
-                                pythonBaseUrl.length() - 1
-                        )
-                        : pythonBaseUrl;
+        this.pythonBaseUrl = pythonBaseUrl.endsWith("/")
+                ? pythonBaseUrl.substring(0, pythonBaseUrl.length() - 1)
+                : pythonBaseUrl;
 
-        System.out.println(
-                "=========================================="
-        );
-        System.out.println(
-                "PYTHON AI BASE URL: " + this.pythonBaseUrl
-        );
-        System.out.println(
-                "=========================================="
-        );
+        System.out.println("==========================================");
+        System.out.println("PYTHON AI BASE URL: " + this.pythonBaseUrl);
+        System.out.println("==========================================");
     }
-
 
     // =========================================================
     // PERFORMANCE
     // =========================================================
-
     public Object callPerformancePrediction(
             Map<String, Object> request) {
 
@@ -61,11 +49,9 @@ public class PythonAIClient {
         );
     }
 
-
     // =========================================================
     // ATTRITION
     // =========================================================
-
     public Object callAttritionPrediction(
             Map<String, Object> request) {
 
@@ -75,11 +61,9 @@ public class PythonAIClient {
         );
     }
 
-
     // =========================================================
     // ATTENDANCE AI
     // =========================================================
-
     public Object callAttendanceInsights(
             Map<String, Object> request) {
 
@@ -89,11 +73,9 @@ public class PythonAIClient {
         );
     }
 
-
     // =========================================================
     // CHATBOT
     // =========================================================
-
     public Object callChatbot(
             Map<String, Object> request) {
 
@@ -103,23 +85,17 @@ public class PythonAIClient {
         );
     }
 
-
     // =========================================================
     // RESUME SCREENING
     // =========================================================
-
     public Object callResumeScreening(
             MultipartFile resume,
             String jobDescription,
             String role) {
 
-        String url =
-                pythonBaseUrl
-                        + "/api/ai/resume/screen";
+        String url = pythonBaseUrl + "/api/ai/resume/screen";
 
-        System.out.println(
-                "Calling Python AI: " + url
-        );
+        System.out.println("Calling Python AI: " + url);
 
         try {
 
@@ -127,9 +103,7 @@ public class PythonAIClient {
                     new LinkedMultiValueMap<>();
 
             ByteArrayResource resumeResource =
-                    new ByteArrayResource(
-                            resume.getBytes()
-                    ) {
+                    new ByteArrayResource(resume.getBytes()) {
 
                         @Override
                         public String getFilename() {
@@ -137,33 +111,18 @@ public class PythonAIClient {
                         }
                     };
 
-            body.add(
-                    "resume",
-                    resumeResource
-            );
+            body.add("resume", resumeResource);
+            body.add("job_description", jobDescription);
+            body.add("role", role);
 
-            body.add(
-                    "job_description",
-                    jobDescription
-            );
-
-            body.add(
-                    "role",
-                    role
-            );
-
-            HttpHeaders headers =
-                    new HttpHeaders();
+            HttpHeaders headers = new HttpHeaders();
 
             headers.setContentType(
                     MediaType.MULTIPART_FORM_DATA
             );
 
             HttpEntity<MultiValueMap<String, Object>> entity =
-                    new HttpEntity<>(
-                            body,
-                            headers
-                    );
+                    new HttpEntity<>(body, headers);
 
             return restTemplate.postForObject(
                     url,
@@ -174,25 +133,24 @@ public class PythonAIClient {
         } catch (HttpStatusCodeException e) {
 
             System.err.println(
-                    "Python AI HTTP Error: "
-                            + e.getStatusCode()
+                    "Python AI HTTP Error: " + e.getStatusCode()
             );
 
             System.err.println(
-                    "Python AI Response: "
-                            + e.getResponseBodyAsString()
+                    "Python AI Response: " +
+                    e.getResponseBodyAsString()
             );
 
             throw new RuntimeException(
-                    "Resume screening failed: "
-                            + e.getResponseBodyAsString()
+                    "Resume screening failed: " +
+                    e.getResponseBodyAsString()
             );
 
         } catch (ResourceAccessException e) {
 
             System.err.println(
-                    "Python AI connection error: "
-                            + e.getMessage()
+                    "Python AI connection error: " +
+                    e.getMessage()
             );
 
             throw new RuntimeException(
@@ -202,54 +160,38 @@ public class PythonAIClient {
         } catch (Exception e) {
 
             System.err.println(
-                    "Resume AI error: "
-                            + e.getMessage()
+                    "Resume AI error: " + e.getMessage()
             );
 
             throw new RuntimeException(
-                    "Unable to process resume: "
-                            + e.getMessage()
+                    "Unable to process resume: " +
+                    e.getMessage()
             );
         }
     }
 
-
     // =========================================================
     // COMMON JSON POST
     // =========================================================
-
     private Object postJson(
             String endpoint,
             Map<String, Object> request) {
 
-        String url =
-                pythonBaseUrl + endpoint;
+        String url = pythonBaseUrl + endpoint;
 
-        System.out.println(
-                "=========================================="
-        );
-        System.out.println(
-                "Calling Python AI: " + url
-        );
-        System.out.println(
-                "Request: " + request
-        );
-        System.out.println(
-                "=========================================="
-        );
+        System.out.println("==========================================");
+        System.out.println("Calling Python AI: " + url);
+        System.out.println("Request: " + request);
+        System.out.println("==========================================");
 
-        HttpHeaders headers =
-                new HttpHeaders();
+        HttpHeaders headers = new HttpHeaders();
 
         headers.setContentType(
                 MediaType.APPLICATION_JSON
         );
 
         HttpEntity<Map<String, Object>> entity =
-                new HttpEntity<>(
-                        request,
-                        headers
-                );
+                new HttpEntity<>(request, headers);
 
         try {
 
@@ -269,25 +211,25 @@ public class PythonAIClient {
         } catch (HttpStatusCodeException e) {
 
             System.err.println(
-                    "Python AI HTTP Status: "
-                            + e.getStatusCode()
+                    "Python AI HTTP Status: " +
+                    e.getStatusCode()
             );
 
             System.err.println(
-                    "Python AI Error Response: "
-                            + e.getResponseBodyAsString()
+                    "Python AI Error Response: " +
+                    e.getResponseBodyAsString()
             );
 
             throw new RuntimeException(
-                    "AI request failed: "
-                            + e.getResponseBodyAsString()
+                    "AI request failed: " +
+                    e.getResponseBodyAsString()
             );
 
         } catch (ResourceAccessException e) {
 
             System.err.println(
-                    "Python AI connection error: "
-                            + e.getMessage()
+                    "Python AI connection error: " +
+                    e.getMessage()
             );
 
             throw new RuntimeException(
