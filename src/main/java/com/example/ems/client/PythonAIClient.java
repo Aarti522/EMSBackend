@@ -19,74 +19,107 @@ import org.springframework.web.multipart.MultipartFile;
 public class PythonAIClient {
 
     private final RestTemplate restTemplate;
+    private final String pythonBaseUrl;
 
-    @Value("${ai.service.base-url:http://localhost:8000}")
-    private String pythonBaseUrl;
+    public PythonAIClient(
+            RestTemplate restTemplate,
+            @Value("${ai.service.base-url}") String pythonBaseUrl) {
 
-    public PythonAIClient(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
+
+        // Remove trailing slash if present
+        this.pythonBaseUrl =
+                pythonBaseUrl.endsWith("/")
+                        ? pythonBaseUrl.substring(
+                                0,
+                                pythonBaseUrl.length() - 1
+                        )
+                        : pythonBaseUrl;
+
+        System.out.println(
+                "=========================================="
+        );
+        System.out.println(
+                "PYTHON AI BASE URL: " + this.pythonBaseUrl
+        );
+        System.out.println(
+                "=========================================="
+        );
     }
 
+
     // =========================================================
-    // 1. PERFORMANCE PREDICTION
-    // Spring:  /ai/performance
-    // Python:  /api/ai/performance/predict
+    // PERFORMANCE
     // =========================================================
-    public Object callPerformancePrediction(Map<String, Object> request) {
+
+    public Object callPerformancePrediction(
+            Map<String, Object> request) {
+
         return postJson(
                 "/api/ai/performance/predict",
                 request
         );
     }
 
+
     // =========================================================
-    // 2. ATTRITION PREDICTION
-    // Spring:  /ai/attrition
-    // Python:  /api/ai/attrition/predict
+    // ATTRITION
     // =========================================================
-    public Object callAttritionPrediction(Map<String, Object> request) {
+
+    public Object callAttritionPrediction(
+            Map<String, Object> request) {
+
         return postJson(
                 "/api/ai/attrition/predict",
                 request
         );
     }
 
+
     // =========================================================
-    // 3. ATTENDANCE AI INSIGHTS
-    // Spring:  /ai/ai-attendance
-    // Python:  /api/ai/attendance/analyze
+    // ATTENDANCE AI
     // =========================================================
-    public Object callAttendanceInsights(Map<String, Object> request) {
+
+    public Object callAttendanceInsights(
+            Map<String, Object> request) {
+
         return postJson(
                 "/api/ai/attendance/analyze",
                 request
         );
     }
 
+
     // =========================================================
-    // 4. HR CHATBOT
-    // Spring:  /ai/chatbot
-    // Python:  /api/ai/chatbot/chat
+    // CHATBOT
     // =========================================================
-    public Object callChatbot(Map<String, Object> request) {
+
+    public Object callChatbot(
+            Map<String, Object> request) {
+
         return postJson(
                 "/api/ai/chatbot/chat",
                 request
         );
     }
 
+
     // =========================================================
-    // 5. RESUME SCREENING
-    // Spring:  /ai/resume
-    // Python:  /api/ai/resume/screen
-    //
-    // This endpoint uses multipart/form-data because a PDF
-    // file is being sent.
+    // RESUME SCREENING
     // =========================================================
+
     public Object callResumeScreening(
             MultipartFile resume,
             String jobDescription,
             String role) {
+
+        String url =
+                pythonBaseUrl
+                        + "/api/ai/resume/screen";
+
+        System.out.println(
+                "Calling Python AI: " + url
+        );
 
         try {
 
@@ -94,7 +127,9 @@ public class PythonAIClient {
                     new LinkedMultiValueMap<>();
 
             ByteArrayResource resumeResource =
-                    new ByteArrayResource(resume.getBytes()) {
+                    new ByteArrayResource(
+                            resume.getBytes()
+                    ) {
 
                         @Override
                         public String getFilename() {
@@ -102,21 +137,33 @@ public class PythonAIClient {
                         }
                     };
 
-            body.add("resume", resumeResource);
-            body.add("job_description", jobDescription);
-            body.add("role", role);
+            body.add(
+                    "resume",
+                    resumeResource
+            );
 
-            HttpHeaders headers = new HttpHeaders();
+            body.add(
+                    "job_description",
+                    jobDescription
+            );
+
+            body.add(
+                    "role",
+                    role
+            );
+
+            HttpHeaders headers =
+                    new HttpHeaders();
+
             headers.setContentType(
                     MediaType.MULTIPART_FORM_DATA
             );
 
             HttpEntity<MultiValueMap<String, Object>> entity =
-                    new HttpEntity<>(body, headers);
-
-            String url =
-                    pythonBaseUrl +
-                    "/api/ai/resume/screen";
+                    new HttpEntity<>(
+                            body,
+                            headers
+                    );
 
             return restTemplate.postForObject(
                     url,
@@ -126,12 +173,27 @@ public class PythonAIClient {
 
         } catch (HttpStatusCodeException e) {
 
+            System.err.println(
+                    "Python AI HTTP Error: "
+                            + e.getStatusCode()
+            );
+
+            System.err.println(
+                    "Python AI Response: "
+                            + e.getResponseBodyAsString()
+            );
+
             throw new RuntimeException(
                     "Resume screening failed: "
-                    + e.getResponseBodyAsString()
+                            + e.getResponseBodyAsString()
             );
 
         } catch (ResourceAccessException e) {
+
+            System.err.println(
+                    "Python AI connection error: "
+                            + e.getMessage()
+            );
 
             throw new RuntimeException(
                     "Python AI service is unavailable."
@@ -139,28 +201,45 @@ public class PythonAIClient {
 
         } catch (Exception e) {
 
+            System.err.println(
+                    "Resume AI error: "
+                            + e.getMessage()
+            );
+
             throw new RuntimeException(
                     "Unable to process resume: "
-                    + e.getMessage()
+                            + e.getMessage()
             );
         }
     }
 
+
     // =========================================================
-    // COMMON JSON POST METHOD
-    // Used by:
-    // Performance
-    // Attrition
-    // Attendance
-    // Chatbot
+    // COMMON JSON POST
     // =========================================================
+
     private Object postJson(
             String endpoint,
             Map<String, Object> request) {
 
-        String url = pythonBaseUrl + endpoint;
+        String url =
+                pythonBaseUrl + endpoint;
 
-        HttpHeaders headers = new HttpHeaders();
+        System.out.println(
+                "=========================================="
+        );
+        System.out.println(
+                "Calling Python AI: " + url
+        );
+        System.out.println(
+                "Request: " + request
+        );
+        System.out.println(
+                "=========================================="
+        );
+
+        HttpHeaders headers =
+                new HttpHeaders();
 
         headers.setContentType(
                 MediaType.APPLICATION_JSON
@@ -174,20 +253,42 @@ public class PythonAIClient {
 
         try {
 
-            return restTemplate.postForObject(
-                    url,
-                    entity,
-                    Object.class
+            Object response =
+                    restTemplate.postForObject(
+                            url,
+                            entity,
+                            Object.class
+                    );
+
+            System.out.println(
+                    "Python AI Response: " + response
             );
+
+            return response;
 
         } catch (HttpStatusCodeException e) {
 
+            System.err.println(
+                    "Python AI HTTP Status: "
+                            + e.getStatusCode()
+            );
+
+            System.err.println(
+                    "Python AI Error Response: "
+                            + e.getResponseBodyAsString()
+            );
+
             throw new RuntimeException(
                     "AI request failed: "
-                    + e.getResponseBodyAsString()
+                            + e.getResponseBodyAsString()
             );
 
         } catch (ResourceAccessException e) {
+
+            System.err.println(
+                    "Python AI connection error: "
+                            + e.getMessage()
+            );
 
             throw new RuntimeException(
                     "Python AI service is unavailable."
