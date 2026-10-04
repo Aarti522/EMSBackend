@@ -19,7 +19,7 @@ import com.example.ems.service.AIService;
 
 @RestController
 @RequestMapping("/ai")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "https://your-frontend.vercel.app")
 public class AIController {
 
     @Autowired
