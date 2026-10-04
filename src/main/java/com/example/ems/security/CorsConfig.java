@@ -16,8 +16,12 @@ public class CorsConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
+        // Local React + deployed Vercel frontend
         configuration.setAllowedOrigins(
-                Arrays.asList("http://localhost:5173")
+                Arrays.asList(
+                        "http://localhost:5173",
+                        "https://ems-frontend-nine-ashy.vercel.app"
+                )
         );
 
         configuration.setAllowedMethods(
@@ -26,6 +30,7 @@ public class CorsConfig {
                         "POST",
                         "PUT",
                         "DELETE",
+                        "PATCH",
                         "OPTIONS"
                 )
         );
@@ -38,7 +43,11 @@ public class CorsConfig {
                 )
         );
 
-        configuration.setAllowCredentials(false);
+        configuration.setExposedHeaders(
+                Arrays.asList("Authorization")
+        );
+
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
