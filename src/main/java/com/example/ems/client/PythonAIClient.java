@@ -21,6 +21,9 @@ public class PythonAIClient {
     private final RestTemplate restTemplate;
     private final String pythonBaseUrl;
 
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 3000;
+
     public PythonAIClient(
             RestTemplate restTemplate,
             @Value("${ai.service.base-url}") String pythonBaseUrl) {
@@ -97,81 +100,102 @@ public class PythonAIClient {
 
         System.out.println("Calling Python AI: " + url);
 
-        try {
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
 
-            MultiValueMap<String, Object> body =
-                    new LinkedMultiValueMap<>();
+            try {
 
-            ByteArrayResource resumeResource =
-                    new ByteArrayResource(resume.getBytes()) {
+                MultiValueMap<String, Object> body =
+                        new LinkedMultiValueMap<>();
 
-                        @Override
-                        public String getFilename() {
-                            return resume.getOriginalFilename();
-                        }
-                    };
+                ByteArrayResource resumeResource =
+                        new ByteArrayResource(resume.getBytes()) {
 
-            body.add("resume", resumeResource);
-            body.add("job_description", jobDescription);
-            body.add("role", role);
+                            @Override
+                            public String getFilename() {
+                                return resume.getOriginalFilename();
+                            }
+                        };
 
-            HttpHeaders headers = new HttpHeaders();
+                body.add("resume", resumeResource);
+                body.add("job_description", jobDescription);
+                body.add("role", role);
 
-            headers.setContentType(
-                    MediaType.MULTIPART_FORM_DATA
-            );
+                HttpHeaders headers = new HttpHeaders();
 
-            HttpEntity<MultiValueMap<String, Object>> entity =
-                    new HttpEntity<>(body, headers);
+                headers.setContentType(
+                        MediaType.MULTIPART_FORM_DATA
+                );
 
-            return restTemplate.postForObject(
-                    url,
-                    entity,
-                    Object.class
-            );
+                HttpEntity<MultiValueMap<String, Object>> entity =
+                        new HttpEntity<>(body, headers);
 
-        } catch (HttpStatusCodeException e) {
+                return restTemplate.postForObject(
+                        url,
+                        entity,
+                        Object.class
+                );
 
-            System.err.println(
-                    "Python AI HTTP Error: " + e.getStatusCode()
-            );
+            } catch (ResourceAccessException e) {
 
-            System.err.println(
-                    "Python AI Response: " +
-                    e.getResponseBodyAsString()
-            );
+                System.err.println(
+                        "Python AI connection error. Attempt "
+                                + attempt + "/" + MAX_RETRIES
+                );
 
-            throw new RuntimeException(
-                    "Resume screening failed: " +
-                    e.getResponseBodyAsString()
-            );
+                System.err.println(
+                        "Reason: " + e.getMessage()
+                );
 
-        } catch (ResourceAccessException e) {
+                if (attempt == MAX_RETRIES) {
 
-            System.err.println(
-                    "Python AI connection error: " +
-                    e.getMessage()
-            );
+                    throw new RuntimeException(
+                            "Python AI service is unavailable. " +
+                            "Please try again in a few seconds."
+                    );
+                }
 
-            throw new RuntimeException(
-                    "Python AI service is unavailable."
-            );
+                waitBeforeRetry();
+            }
 
-        } catch (Exception e) {
+            catch (HttpStatusCodeException e) {
 
-            System.err.println(
-                    "Resume AI error: " + e.getMessage()
-            );
+                System.err.println(
+                        "Python AI HTTP Error: "
+                                + e.getStatusCode()
+                );
 
-            throw new RuntimeException(
-                    "Unable to process resume: " +
-                    e.getMessage()
-            );
+                System.err.println(
+                        "Python AI Response: "
+                                + e.getResponseBodyAsString()
+                );
+
+                // HTTP error means Python service responded.
+                // Don't retry blindly.
+                throw new RuntimeException(
+                        "Resume screening failed: "
+                                + e.getResponseBodyAsString()
+                );
+
+            } catch (Exception e) {
+
+                System.err.println(
+                        "Resume AI error: " + e.getMessage()
+                );
+
+                throw new RuntimeException(
+                        "Unable to process resume: "
+                                + e.getMessage()
+                );
+            }
         }
+
+        throw new RuntimeException(
+                "Python AI service is unavailable."
+        );
     }
 
     // =========================================================
-    // COMMON JSON POST
+    // COMMON JSON POST WITH RETRY
     // =========================================================
     private Object postJson(
             String endpoint,
@@ -193,47 +217,91 @@ public class PythonAIClient {
         HttpEntity<Map<String, Object>> entity =
                 new HttpEntity<>(request, headers);
 
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+
+            try {
+
+                Object response =
+                        restTemplate.postForObject(
+                                url,
+                                entity,
+                                Object.class
+                        );
+
+                System.out.println(
+                        "Python AI Response: " + response
+                );
+
+                return response;
+
+            } catch (ResourceAccessException e) {
+
+                System.err.println(
+                        "Python AI connection error. Attempt "
+                                + attempt + "/"
+                                + MAX_RETRIES
+                );
+
+                System.err.println(
+                        "Reason: " + e.getMessage()
+                );
+
+                if (attempt == MAX_RETRIES) {
+
+                    throw new RuntimeException(
+                            "Python AI service is unavailable. " +
+                            "It may be starting up. " +
+                            "Please try again in a few seconds."
+                    );
+                }
+
+                System.out.println(
+                        "Retrying Python AI service..."
+                );
+
+                waitBeforeRetry();
+
+            } catch (HttpStatusCodeException e) {
+
+                System.err.println(
+                        "Python AI HTTP Status: "
+                                + e.getStatusCode()
+                );
+
+                System.err.println(
+                        "Python AI Error Response: "
+                                + e.getResponseBodyAsString()
+                );
+
+                // Python responded with an HTTP error.
+                // Don't retry 4xx/5xx blindly.
+                throw new RuntimeException(
+                        "AI request failed: "
+                                + e.getResponseBodyAsString()
+                );
+            }
+        }
+
+        throw new RuntimeException(
+                "Python AI service is unavailable."
+        );
+    }
+
+    // =========================================================
+    // RETRY DELAY
+    // =========================================================
+    private void waitBeforeRetry() {
+
         try {
 
-            Object response =
-                    restTemplate.postForObject(
-                            url,
-                            entity,
-                            Object.class
-                    );
+            Thread.sleep(RETRY_DELAY_MS);
 
-            System.out.println(
-                    "Python AI Response: " + response
-            );
+        } catch (InterruptedException e) {
 
-            return response;
-
-        } catch (HttpStatusCodeException e) {
-
-            System.err.println(
-                    "Python AI HTTP Status: " +
-                    e.getStatusCode()
-            );
-
-            System.err.println(
-                    "Python AI Error Response: " +
-                    e.getResponseBodyAsString()
-            );
+            Thread.currentThread().interrupt();
 
             throw new RuntimeException(
-                    "AI request failed: " +
-                    e.getResponseBodyAsString()
-            );
-
-        } catch (ResourceAccessException e) {
-
-            System.err.println(
-                    "Python AI connection error: " +
-                    e.getMessage()
-            );
-
-            throw new RuntimeException(
-                    "Python AI service is unavailable."
+                    "AI request retry interrupted."
             );
         }
     }
